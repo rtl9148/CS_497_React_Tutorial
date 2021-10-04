@@ -1,6 +1,6 @@
 import React, { useState} from 'react';
 import { hasConflict, timeParts} from '../utilities/times.js';
-import { setData } from '../utilities/firebase.js';
+import { setData, signInWithGoogle, useUserState, signOut } from '../utilities/firebase.js';
 
 const terms = { F: 'Fall', W: 'Winter', S: 'Spring'};
 
@@ -30,15 +30,35 @@ const TermButton = ({term, setTerm, checked}) => (
   </>
 );
 
-const TermSelector = ({term, setTerm}) => (
-  <div className="btn-group">
-  { 
-    Object.values(terms).map(value => (
-      <TermButton key={value} term={value} setTerm={setTerm} checked={value === term} />
-    ))
-  }
-  </div>
+const SignInButton = () => (
+  <button className="btn btn-secondary btn-sm"
+      onClick={() => signInWithGoogle()}>
+    Sign In
+  </button>
 );
+
+const SignOuButton = () => (
+  <button className="btn btn-secondary btn-sm"
+      onClick={() => signOut()}>
+    Sign Out
+  </button>
+);
+
+const TermSelector = ({term, setTerm}) => {
+  const [user] = useUserState();
+  return (
+    <div className="btn-toolbar justify-content-between">
+      <div className="btn-group">
+      { 
+        Object.values(terms).map(
+          value => <TermButton key={value} term={value} setTerm={setTerm} checked={value === term} />
+        )
+      }
+      </div>
+      { user ? <SignOuButton /> : <SignInButton /> }
+    </div>
+  );
+}
 
 const toggle = (x, lst) => (
   lst.includes(x) ? lst.filter(y => y !== x) : [x, ...lst]
@@ -57,6 +77,7 @@ const reschedule = async (course, meets) => {
 const Course = ({ course, selected, setSelected }) => {
   const isSelected = selected.includes(course);
   const isDisabled = !isSelected && hasConflict(course, selected);
+  const [user] = useUserState();
   const style = {
     backgroundColor: isDisabled? 'lightgrey' : isSelected ? 'lightgreen' : 'white'
   };
@@ -64,7 +85,7 @@ const Course = ({ course, selected, setSelected }) => {
     <div className="card m-1 p-2" 
       style={style}
       onClick={isDisabled ? null : () =>  setSelected(toggle(course, selected))}
-      onDoubleClick={() => reschedule(course, getCourseMeetingData(course))}>
+      onDoubleClick={!user ? null : () => reschedule(course, getCourseMeetingData(course))}>
       <div className="card-body">
         <div className="card-title">{ getCourseTerm(course) } CS { getCourseNumber(course) }</div>
         <div className="card-text">{ course.title }</div>
